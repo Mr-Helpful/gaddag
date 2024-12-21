@@ -9,7 +9,7 @@ use std::{array, fmt::Display};
 pub struct WideNode<const N: usize = THIN_CHARS> {
     pub(crate) end: bool,
     #[serde(with = "serde_array")]
-    pub(crate) children: [usize; N],
+    pub(crate) children: [u32; N],
 }
 
 impl<const N: usize> Default for WideNode<N> {
@@ -34,6 +34,7 @@ impl<const N: usize> Display for WideNode<N> {
 
 impl<const N: usize> ReadNode for WideNode<N> {
     type Idx = usize;
+    const ROOT_IDX: Self::Idx = 0;
 
     fn len(&self) -> usize {
         self.children.iter().map(|&idx| usize::from(idx > 0)).sum()
@@ -52,7 +53,7 @@ impl<const N: usize> ReadNode for WideNode<N> {
     }
 
     fn get(&self, c: u8) -> Self::Idx {
-        self.children[c as usize]
+        self.children[c as usize] as Self::Idx
     }
 }
 
@@ -60,7 +61,7 @@ impl<const N: usize> From<ThinNode> for WideNode<N> {
     fn from(value: ThinNode) -> Self {
         Self {
             end: value.is_end(),
-            children: array::from_fn(|i| value.get(i as u8)),
+            children: array::from_fn(|i| value.get(i as u8) as u32),
         }
     }
 }
@@ -70,8 +71,8 @@ impl<const N: usize> WriteNode for WideNode<N> {
         &mut self.end
     }
 
-    fn get_mut(&mut self, c: u8) -> &mut Self::Idx {
-        &mut self.children[c as usize]
+    fn set(&mut self, c: u8, idx: Self::Idx) {
+        self.children[c as usize] = idx as u32
     }
 }
 
@@ -82,7 +83,7 @@ pub(crate) mod test {
     use std::{array, collections::HashSet};
 
     fn wide_children(num: impl Into<SizeRange>) -> BoxedStrategy<WideNode> {
-        (sampled(num, 0..26), vec(1usize.., 26..=26))
+        (sampled(num, 0..26), vec(1u32.., 26..=26))
             .prop_map(|(mask, idxs)| {
                 array::from_fn(|i| if (mask >> i) & 1 > 0 { idxs[i] } else { 0 })
             })

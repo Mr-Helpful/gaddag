@@ -12,12 +12,13 @@ pub(crate) const END_MASK: u32 = 1 << THIN_CHARS;
 // @note leaf nodes serialize to be empty
 #[derive(Clone, Copy, Debug, Default, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ThinNode {
-    pub(crate) idx: usize,
+    pub(crate) idx: u32,
     pub(crate) mask: u32,
 }
 
 impl ReadNode for ThinNode {
     type Idx = usize;
+    const ROOT_IDX: Self::Idx = 0;
 
     fn len(&self) -> usize {
         (self.mask & CHILD_MASK).count_ones() as usize
@@ -42,7 +43,7 @@ impl ReadNode for ThinNode {
 
         // mask away all children "above" `i`
         let masked = self.mask & ((1 << i) - 1);
-        self.idx + (masked.count_ones() as Self::Idx)
+        self.idx as Self::Idx + (masked.count_ones() as Self::Idx)
     }
 
     fn next_c(&self, c: u8) -> Option<u8> {
@@ -75,7 +76,10 @@ impl TryFrom<WideNode<26>> for ThinNode {
             mask |= 1 << c;
         }
 
-        Ok(Self { idx, mask })
+        Ok(Self {
+            idx: idx as u32,
+            mask,
+        })
     }
 }
 
@@ -90,7 +94,7 @@ pub(crate) mod test {
     }
 
     pub fn thin_node() -> BoxedStrategy<ThinNode> {
-        any::<(u32, usize)>()
+        any::<(u32, u32)>()
             .prop_map(|(mask, idx)| ThinNode {
                 idx,
                 mask: mask & CHILD_MASK,

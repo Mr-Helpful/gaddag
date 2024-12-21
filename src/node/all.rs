@@ -4,8 +4,9 @@ use std::array;
 #[derive(Clone, Copy)]
 pub struct AllNode<const NUM: usize, N>(pub(crate) [N; NUM]);
 
-impl<const NUM: usize, N: ReadNode<Idx = usize>> ReadNode for AllNode<NUM, N> {
-    type Idx = [usize; NUM];
+impl<const NUM: usize, N: ReadNode> ReadNode for AllNode<NUM, N> {
+    type Idx = [N::Idx; NUM];
+    const ROOT_IDX: Self::Idx = [N::ROOT_IDX; NUM];
 
     fn is_empty(&self) -> bool {
         self.0.iter().any(ReadNode::is_empty) || self.len() == 0

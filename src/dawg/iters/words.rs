@@ -22,10 +22,10 @@ impl<D: IndexDawg> Iterator for WordIter<D> {
     fn next(&mut self) -> Option<Vec<u8>> {
         while let Some((idx, mut keys)) = self.stack.pop() {
             if let Some(c) = keys.pop() {
-                self.stack.push((idx.clone(), keys));
+                self.stack.push((idx, keys));
 
-                let c_idx = self.dawg.index(idx.clone()).get(c);
-                let keys = self.dawg.index(c_idx.clone()).keys().collect();
+                let c_idx = self.dawg.index(idx).get(c);
+                let keys = self.dawg.index(c_idx).keys().collect();
 
                 self.word.push(c);
                 self.stack.push((c_idx, keys));
@@ -34,7 +34,7 @@ impl<D: IndexDawg> Iterator for WordIter<D> {
 
             let word = self.word.clone();
             self.word.pop();
-            if self.dawg.index(idx.clone()).is_end() {
+            if self.dawg.index(idx).is_end() {
                 // no nodes left to explore on current node
                 // => we're currently backtracking
                 return Some(word);

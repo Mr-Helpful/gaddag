@@ -7,7 +7,6 @@ pub struct AllDawg<const N: usize, D>([D; N]);
 
 impl<const N: usize, D: IndexDawg<Idx = usize>> IndexDawg for AllDawg<N, D> {
     type Idx = [D::Idx; N];
-    const ROOT_IDX: Self::Idx = [0; N];
 
     type NodeRef<'a>
         = AllNode<N, D::NodeRef<'a>>

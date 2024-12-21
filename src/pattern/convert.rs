@@ -9,7 +9,7 @@ impl From<Pattern> for FlatDawg<ThinNode> {
 
         for mask in value.0 {
             let node = ThinNode {
-                idx: nodes.len() + repeats,
+                idx: (nodes.len() + repeats) as u32,
                 mask,
             };
             for _ in 0..repeats {
@@ -38,7 +38,7 @@ impl From<Pattern> for FlatDawg<WideNode<THIN_CHARS>> {
             let next = nodes.len() + 1;
             nodes.push(WideNode {
                 end: false,
-                children: array::from_fn(|i| (mask >> i & 1) as usize * next),
+                children: array::from_fn(|i| (mask >> i & 1) * next as u32),
             });
         }
 

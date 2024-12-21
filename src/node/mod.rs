@@ -11,7 +11,8 @@ use iters::{ChildIter, KeyIter, PairIter};
 
 /// A node of a DAWG that can have it children read.
 pub trait ReadNode: Sized {
-    type Idx;
+    type Idx: Clone + Copy + PartialEq;
+    const ROOT_IDX: Self::Idx;
 
     /// How many children `self` has
     fn len(&self) -> usize {
@@ -56,8 +57,8 @@ pub trait ReadNode: Sized {
 }
 
 impl<N: ReadNode> ReadNode for &N {
-    type Idx = <N as ReadNode>::Idx;
-
+    type Idx = N::Idx;
+    const ROOT_IDX: Self::Idx = N::ROOT_IDX;
     fn is_empty(&self) -> bool {
         N::is_empty(self)
     }
@@ -72,8 +73,8 @@ impl<N: ReadNode> ReadNode for &N {
     }
 }
 impl<N: ReadNode> ReadNode for &mut N {
-    type Idx = <N as ReadNode>::Idx;
-
+    type Idx = N::Idx;
+    const ROOT_IDX: Self::Idx = N::ROOT_IDX;
     fn is_empty(&self) -> bool {
         N::is_empty(self)
     }
@@ -96,15 +97,20 @@ pub trait WriteNode: ReadNode {
 
     /// Sets the index of a given child `c`.<br>
     /// Returns the previous index of the child.
-    fn get_mut(&mut self, c: u8) -> &mut Self::Idx;
+    fn set(&mut self, c: u8, idx: Self::Idx);
+
+    /// Takes the index of a given child `c`<br>
+    /// replacing it with the root index.
+    fn take(&mut self, c: u8) -> Self::Idx {
+        let idx = self.get(c);
+        self.set(c, Self::ROOT_IDX);
+        idx
+    }
 
     /// Pops the next child pair from this node
-    fn pop(&mut self) -> Option<(u8, Self::Idx)>
-    where
-        Self::Idx: Default,
-    {
+    fn pop(&mut self) -> Option<(u8, Self::Idx)> {
         let c = self.next_c(0)?;
-        let idx = std::mem::take(self.get_mut(c));
+        let idx = self.take(c);
         Some((c, idx))
     }
 }
@@ -113,7 +119,7 @@ impl<N: WriteNode> WriteNode for &mut N {
     fn is_end_mut(&mut self) -> &mut bool {
         N::is_end_mut(self)
     }
-    fn get_mut(&mut self, c: u8) -> &mut Self::Idx {
-        N::get_mut(self, c)
+    fn set(&mut self, c: u8, idx: Self::Idx) {
+        N::set(self, c, idx)
     }
 }

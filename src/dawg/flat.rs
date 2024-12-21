@@ -71,7 +71,6 @@ mod read {
 
     impl<N: ReadNode<Idx = usize>> IndexDawg for FlatDawg<N> {
         type Idx = usize;
-        const ROOT_IDX: Self::Idx = 0;
 
         type NodeRef<'a>
             = &'a N
@@ -147,13 +146,13 @@ mod write {
         fn add(&mut self, word: impl AsRef<[u8]>) -> bool {
             let word = word.as_ref();
 
-            let mut idx = 0;
+            let mut idx = Self::ROOT_IDX;
             for &c in word {
                 let node = self.index(idx);
-                if node.get(c) == 0 {
+                if node.get(c) == Self::ROOT_IDX {
                     let n_idx = self.insert();
                     let node = self.index_mut(idx);
-                    *node.get_mut(c) = n_idx;
+                    node.set(c, n_idx);
                 }
                 idx = self.index(idx).get(c);
             }
@@ -170,7 +169,8 @@ mod write {
                 *self.index_mut(idx0).is_end_mut() |= node1.is_end();
                 for (c, idx) in node1.pairs() {
                     if !self.index(idx0).has(c) {
-                        *self.index_mut(idx0).get_mut(c) = self.insert();
+                        let idx = self.insert();
+                        self.index_mut(idx0).set(c, idx);
                     }
                     stack.push((self.index(idx0).get(c), idx));
                 }
@@ -180,10 +180,10 @@ mod write {
         fn sub(&mut self, word: impl AsRef<[u8]>) -> bool {
             let word = word.as_ref();
 
-            let mut idx = 0;
+            let mut idx = Self::ROOT_IDX;
             for &c in word {
                 idx = self.index(idx).get(c);
-                if idx == 0 {
+                if idx == Self::ROOT_IDX {
                     return false;
                 }
             }
@@ -229,7 +229,7 @@ mod write {
                     if node1.has(c) {
                         stack.push((idx, node1.get(c)));
                     } else {
-                        *node0.get_mut(c) = 0;
+                        node0.set(c, Self::ROOT_IDX);
                     }
                 }
             }
@@ -265,7 +265,7 @@ impl<N: WriteNode<Idx = usize> + Clone + std::fmt::Debug + std::fmt::Display> Fl
             for k in keys.into_iter().rev() {
                 let c_empty = stack.pop().expect("should have emptiness info");
                 if c_empty {
-                    *node.get_mut(k) = 0;
+                    node.set(k, Self::ROOT_IDX);
                 }
                 empty &= c_empty;
             }
@@ -285,8 +285,8 @@ impl<N: WriteNode<Idx = usize> + Clone + std::fmt::Debug + std::fmt::Display> Fl
         // @note this could potentially be `HashMap<&N, usize>` to remove the
         // need to clone, but it lead to really wacky borrow checker issues
         // around the interior `for (c, mut idx0)` loop and the use of `entry`
-        let mut seen: HashMap<N, usize> = HashMap::new();
-        let mut stack = vec![(0, self.index(0).clone())];
+        let mut seen: HashMap<N, N::Idx> = HashMap::new();
+        let mut stack = vec![(Self::ROOT_IDX, self.index(Self::ROOT_IDX).clone())];
 
         while let Some(&mut (idx, ref mut node)) = stack.last_mut() {
             if let Some((_, c_idx)) = node.pop() {
@@ -298,7 +298,7 @@ impl<N: WriteNode<Idx = usize> + Clone + std::fmt::Debug + std::fmt::Display> Fl
             // backtracking, perform minimisation
             for (c, c_idx) in self.index(idx).clone().pairs() {
                 if let Some(&n_idx) = seen.get(self.index(c_idx)) {
-                    *(self.index_mut(idx).get_mut(c)) = n_idx;
+                    self.index_mut(idx).set(c, n_idx);
                 }
             }
 
@@ -409,7 +409,7 @@ impl<N: WriteNode<Idx = usize> + Clone + std::fmt::Debug + std::fmt::Display> Fl
         // # Update indices
         for node in nodes.iter_mut() {
             for (k, c_idx) in node.clone().pairs() {
-                *node.get_mut(k) = idx_map[c_idx];
+                node.set(k, idx_map[c_idx]);
             }
         }
         self.0 = nodes;

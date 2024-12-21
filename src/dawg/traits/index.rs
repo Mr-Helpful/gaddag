@@ -3,10 +3,10 @@ use super::{ReadNode, WriteNode};
 /// Utility trait for raw indexing into DAWGs
 pub trait IndexDawg {
     /// Indexes into the DAWGs nodes
-    type Idx: Clone;
+    type Idx: Clone + Copy + PartialEq;
 
     /// The index of the root node, through which other nodes can be accessed
-    const ROOT_IDX: Self::Idx;
+    const ROOT_IDX: Self::Idx = Self::NodeRef::ROOT_IDX;
 
     /// A reference to a node in the DAWG
     type NodeRef<'a>: ReadNode<Idx = Self::Idx>
@@ -19,7 +19,6 @@ pub trait IndexDawg {
 
 impl<D: IndexDawg> IndexDawg for &D {
     type Idx = D::Idx;
-    const ROOT_IDX: Self::Idx = D::ROOT_IDX;
     type NodeRef<'a>
         = D::NodeRef<'a>
     where
@@ -30,7 +29,6 @@ impl<D: IndexDawg> IndexDawg for &D {
 }
 impl<D: IndexDawg> IndexDawg for &mut D {
     type Idx = D::Idx;
-    const ROOT_IDX: Self::Idx = D::ROOT_IDX;
     type NodeRef<'a>
         = D::NodeRef<'a>
     where

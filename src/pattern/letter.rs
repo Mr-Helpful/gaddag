@@ -85,6 +85,7 @@ pub const CHILD_MASK: u32 = (1 << ALPHA_CHARS) - 1;
 
 impl ReadNode for Letter<'_> {
     type Idx = usize;
+    const ROOT_IDX: Self::Idx = 0;
 
     fn is_empty(&self) -> bool {
         self.0.is_none_or(|node| node.mask & CHILD_MASK == 0)
