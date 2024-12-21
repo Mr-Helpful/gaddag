@@ -78,6 +78,8 @@ jobs:
       - name: Build
         uses: ./.github/actions/build
 
+      - name: Semver
+        uses: obi1kenobi/cargo-semver-checks-action@v2
       - name: Lint
         run: cargo clippy --all-targets --all-features
 
